@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Compiled Output (TypeScript output)
+dist/
+
+# Environment Variables & Configuration Secrets
+.env
+
+# Local Database & Persistence
+# We want to keep your actual chat history out of version control
+data/*.json
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS Generated Files
+.DS_Store
