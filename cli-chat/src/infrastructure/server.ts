@@ -6,6 +6,25 @@ import { Username } from '../domain/valueObjects/Username';
 
 const PORT = 4000;
 
+const connectedClients = new Map<net.Socket, string>();
+
+function convertEnvelopeToJson(envelope: MessageEnvelope){
+    return JSON.stringify(envelope) + '\n';
+}
+
+function broadcast(envelope: MessageEnvelope, senderSocket?: net.Socket) {
+    for (const [clientSocket, _] of connectedClients.entries()) {
+        if (clientSocket !== senderSocket) {
+            clientSocket.write(convertEnvelopeToJson(envelope));
+        }
+    }
+}
+
+function sendMessage(envelope: MessageEnvelope, socket: net.Socket){
+    return socket.write(convertEnvelopeToJson(envelope));
+}
+
+
 const server = net.createServer((socket) => {
     console.log(`New client connected from ${socket.remoteAddress}`);
 
@@ -19,7 +38,7 @@ const server = net.createServer((socket) => {
         timestamp: new Date().toISOString()
     };
 
-    socket.write(JSON.stringify(welcomeMessage) + '\n');
+    sendMessage(welcomeMessage, socket)
 
     socket.on('data', (chunk) => {
         buffer += chunk.toString();
@@ -53,12 +72,20 @@ const server = net.createServer((socket) => {
 
                 if (envelope.type === MessageType.JOIN) {
                     try {
-                        if(!envelope.payload.username){
+                        if (!envelope.payload.username) {
                             throw new Error("JOIN payload must contain a username");
                         }
 
                         const username = new Username(envelope.payload.username);
+                        const nameString = username.getValue()
 
+                        for (const existingName of connectedClients.values()) {
+                            if (existingName === nameString) {
+                                throw new Error("Username is already taken.");
+                            }
+                        }
+
+                        connectedClients.set(socket, nameString);
                         console.log(`User joined with name: ${username.getValue()}`);
 
                         const successResponse: MessageEnvelope = {
@@ -69,21 +96,68 @@ const server = net.createServer((socket) => {
                             timestamp: new Date().toISOString()
                         }
 
-                        socket.write(JSON.stringify(successResponse) + '\n');
+                        sendMessage(successResponse, socket)
+
+                        broadcast({
+                            type: MessageType.SYSTEM,
+                            payload: {
+                                message: `${nameString} has entered the Citadel.`
+                            },
+                            timestamp: new Date().toISOString()
+                        }, socket);
 
                     } catch (domainError: any) {
+                        const errorCode = domainError.message === "Username is already taken"
+                            ? ErrorCode.DUPLICATE_USERNAME
+                            : ErrorCode.INVALID_USERNAME;
+
                         const errorResponse: MessageEnvelope = {
                             type: MessageType.ERROR,
                             payload: {
-                                code: ErrorCode.INVALID_USERNAME,
+                                code: errorCode,
                                 message: domainError.message
                             },
                             timestamp: new Date().toISOString()
                         }
 
-                        socket.write(JSON.stringify(errorResponse) + '\n');
+                        sendMessage(errorResponse, socket);
                     }
+                } else if (envelope.type === MessageType.MESSAGE) {
+                    const senderName = connectedClients.get(socket);
+
+                    if (!senderName) {
+                        const errorResponse: MessageEnvelope = {
+                            type: MessageType.ERROR,
+                            payload: {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: "You must JOIN before sending messages."
+                            },
+                            timestamp: new Date().toISOString()
+                        }
+
+                        sendMessage(errorResponse, socket)
+
+                        continue;
+                    }
+
+                    if (!envelope.payload.text) {
+                        throw new Error("MESSAGE payload must contain 'text'.");
+                    }
+
+                    console.log(`[${senderName}]: ${envelope.payload.text}`);
+
+                    const broadcastMessage: MessageEnvelope = {
+                        type: MessageType.ERROR,
+                        payload: {
+                            code: senderName,
+                            message: envelope.payload.text
+                        },
+                        timestamp: new Date().toISOString()
+                    }
+
+                    broadcast(broadcastMessage, socket);
                 }
+
             } catch (err: any) {
                 console.error(`Protocol violation: ${err.message}`);
 
@@ -95,14 +169,29 @@ const server = net.createServer((socket) => {
                     },
                     timestamp: new Date().toISOString()
                 }
-
-                socket.write(JSON.stringify(errorResponse) + '\n');
+                sendMessage(errorResponse, socket);
             }
         }
     });
 
     socket.on('end', () => {
-        console.log('Client disconnected');
+        const name = connectedClients.get(socket);
+
+        if (name) {
+            connectedClients.delete(socket);
+
+            console.log(`${name} disconnected. Total users; ${connectedClients.size}`);
+
+            const disonnectMessage: MessageEnvelope = {
+                type: MessageType.ERROR,
+                payload: {
+                    message: `${name} has left the Citadel.`
+                },
+                timestamp: new Date().toISOString()
+            }
+
+            broadcast(disonnectMessage, socket);
+        }
     });
 
     socket.on('error', (err) => {
