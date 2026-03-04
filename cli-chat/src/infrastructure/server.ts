@@ -147,8 +147,8 @@ const server = net.createServer((socket) => {
                     const broadcastMessage: MessageEnvelope = {
                         type: MessageType.MESSAGE,
                         payload: {
-                            code: senderName,
-                            message: envelope.payload.text
+                            username: senderName,
+                            text: envelope.payload.text
                         },
                         timestamp: new Date().toISOString()
                     }
