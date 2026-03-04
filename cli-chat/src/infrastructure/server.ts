@@ -181,7 +181,7 @@ const server = net.createServer((socket) => {
             console.log(`${name} disconnected. Total users; ${connectedClients.size}`);
 
             const disonnectMessage: MessageEnvelope = {
-                type: MessageType.ERROR,
+                type: MessageType.SYSTEM,
                 payload: {
                     message: `${name} has left the Citadel.`
                 },
