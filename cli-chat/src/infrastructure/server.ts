@@ -43,15 +43,13 @@ const server = net.createServer((socket) => {
     socket.on('data', (chunk) => {
         buffer += chunk.toString();
 
-        let boundary = buffer.indexOf('\n');
+        const parts = buffer.split('\n');
+        buffer = parts.pop() ?? '';
 
-        while (boundary !== -1) {
-            const rawData = buffer.substring(0, boundary).trim();
-            buffer = buffer.substring(boundary + 1);
-            boundary = buffer.indexOf('\n');
-
-
-            if (!rawData) {
+        for (const rawData of parts) {
+            const trimmed = rawData.trim();
+        
+            if (!trimmed) {
                 continue;
             }
 
