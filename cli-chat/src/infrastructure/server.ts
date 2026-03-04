@@ -145,7 +145,7 @@ const server = net.createServer((socket) => {
                     console.log(`[${senderName}]: ${envelope.payload.text}`);
 
                     const broadcastMessage: MessageEnvelope = {
-                        type: MessageType.ERROR,
+                        type: MessageType.MESSAGE,
                         payload: {
                             code: senderName,
                             message: envelope.payload.text
