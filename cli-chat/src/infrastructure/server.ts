@@ -19,7 +19,6 @@ function serializeEnvelope(envelope: MessageEnvelope) {
 
 function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
     for (const [userId, clientSocket] of connectionMap.entries()) {
-        const user = userRepository.getById(userId);
 
         if (userId !== senderUser.id) {
             clientSocket.write(serializeEnvelope(envelope));
