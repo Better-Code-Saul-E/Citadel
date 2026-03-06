@@ -2,25 +2,31 @@ import net from 'net';
 import { MessageType } from '../domain/enums/MessageType';
 import { MessageEnvelope } from '../domain/types/MessageEnvelope';
 import { ErrorCode } from '../domain/errors/ErrorCode';
-import { Username } from '../domain/valueObjects/Username';
+import { JoinUserUseCase } from '../application/useCases/JoinUserUseCase';
+import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
+import { User } from '../domain/entities/User';
 
 const PORT = 4000;
 
-const connectedClients = new Map<net.Socket, string>();
+const connectionMap = new Map<string, net.Socket>();
+const userRepository = new InMemoryUserRepository();
+const joinUserUseCase = new JoinUserUseCase(userRepository);
 
-function convertEnvelopeToJson(envelope: MessageEnvelope){
+function convertEnvelopeToJson(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
 }
 
-function broadcast(envelope: MessageEnvelope, senderSocket?: net.Socket) {
-    for (const [clientSocket, _] of connectedClients.entries()) {
-        if (clientSocket !== senderSocket) {
+function broadcast(envelope: MessageEnvelope, senderUser: User) {
+    for (const [userId, clientSocket] of connectionMap.entries()) {
+        const user = userRepository.getById(userId);
+
+        if (userId !== senderUser.id) {
             clientSocket.write(convertEnvelopeToJson(envelope));
         }
     }
 }
 
-function sendMessage(envelope: MessageEnvelope, socket: net.Socket){
+function sendMessage(envelope: MessageEnvelope, socket: net.Socket) {
     return socket.write(convertEnvelopeToJson(envelope));
 }
 
@@ -48,7 +54,7 @@ const server = net.createServer((socket) => {
 
         for (const rawData of parts) {
             const trimmed = rawData.trim();
-        
+
             if (!trimmed) {
                 continue;
             }
@@ -74,24 +80,17 @@ const server = net.createServer((socket) => {
                             throw new Error("JOIN payload must contain a username");
                         }
 
-                        const result = "";
-                        
-                        const username = new Username(envelope.payload.username);
-                        const nameString = username.value
+                        const user = joinUserUseCase.execute(envelope.payload.username);
+                        const username = user.username.value;
 
-                        for (const existingName of connectedClients.values()) {
-                            if (existingName === nameString) {
-                                throw new Error("Username is already taken.");
-                            }
-                        }
 
-                        connectedClients.set(socket, nameString);
-                        console.log(`User joined with name: ${username.value}`);
+                        connectionMap.set(user.id, socket);
+                        console.log(`User joined with name: ${username}`);
 
                         const successResponse: MessageEnvelope = {
                             type: MessageType.SYSTEM,
                             payload: {
-                                message: `Welcome, ${username.value}!`
+                                message: `Welcome, ${username}!`
                             },
                             timestamp: new Date().toISOString()
                         }
@@ -101,10 +100,10 @@ const server = net.createServer((socket) => {
                         broadcast({
                             type: MessageType.SYSTEM,
                             payload: {
-                                message: `${nameString} has entered the Citadel.`
+                                message: `${username} has entered the Citadel.`
                             },
                             timestamp: new Date().toISOString()
-                        }, socket);
+                        }, user);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
@@ -123,9 +122,9 @@ const server = net.createServer((socket) => {
                         sendMessage(errorResponse, socket);
                     }
                 } else if (envelope.type === MessageType.MESSAGE) {
-                    const senderName = connectedClients.get(socket);
+                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
 
-                    if (!senderName) {
+                    if (!entry) {
                         const errorResponse: MessageEnvelope = {
                             type: MessageType.ERROR,
                             payload: {
@@ -140,22 +139,31 @@ const server = net.createServer((socket) => {
                         continue;
                     }
 
+
+                    const [userId] = entry;
+                    const senderUser = userRepository.getById(userId);
+                    if (!senderUser) {
+                        continue;
+                    }
+
+                    const username = senderUser.username.value;
+
                     if (!envelope.payload.text) {
                         throw new Error("MESSAGE payload must contain 'text'.");
                     }
 
-                    console.log(`[${senderName}]: ${envelope.payload.text}`);
+                    console.log(`[${username}]: ${envelope.payload.text}`);
 
                     const broadcastMessage: MessageEnvelope = {
                         type: MessageType.MESSAGE,
                         payload: {
-                            username: senderName,
+                            username: username,
                             text: envelope.payload.text
                         },
                         timestamp: new Date().toISOString()
                     }
 
-                    broadcast(broadcastMessage, socket);
+                    broadcast(broadcastMessage, senderUser);
                 }
 
             } catch (err: any) {
@@ -175,22 +183,31 @@ const server = net.createServer((socket) => {
     });
 
     socket.on('end', () => {
-        const name = connectedClients.get(socket);
+        const entry = [...connectionMap.entries()].find(([id, s]) => s === socket);
 
-        if (name) {
-            connectedClients.delete(socket);
+        if (entry) {
+            const [userId] = entry;
 
-            console.log(`${name} disconnected. Total users; ${connectedClients.size}`);
+            const user = userRepository.getById(userId);
+            const username = user?.username.value
+
+            connectionMap.delete(userId);
+            userRepository.remove(userId);
+
+            console.log(`${username} disconnected. Total users; ${connectionMap.size}`);
 
             const disonnectMessage: MessageEnvelope = {
                 type: MessageType.SYSTEM,
                 payload: {
-                    message: `${name} has left the Citadel.`
+                    message: `${username} has left the Citadel.`
                 },
                 timestamp: new Date().toISOString()
             }
 
-            broadcast(disonnectMessage, socket);
+            if (user) {
+                broadcast(disonnectMessage, user);
+            }
+
         }
     });
 
