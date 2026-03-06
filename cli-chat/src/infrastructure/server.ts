@@ -186,7 +186,7 @@ const server = net.createServer((socket) => {
 
             console.log(`${username} disconnected. Total users; ${connectionMap.size}`);
 
-            const disonnectEnvelope: MessageEnvelope = createEnvelope(
+            const disconnectEnvelope: MessageEnvelope = createEnvelope(
                 MessageType.SYSTEM,
                 {
                     message: `${username} has left the Citadel.`
@@ -194,7 +194,7 @@ const server = net.createServer((socket) => {
             );
 
             if (user) {
-                broadcastEnvelope(disonnectEnvelope, user);
+                broadcastEnvelope(disconnectEnvelope, user);
             }
 
         }
