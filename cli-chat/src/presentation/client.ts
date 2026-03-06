@@ -67,7 +67,7 @@ client.on('data', (chunk) => {
 
             }
             else if (envelope.type === MessageType.MESSAGE) {
-                console.log(`[${envelope.payload.code}]: ${envelope.payload.text}`);
+                console.log(`[${envelope.payload.username}]: ${envelope.payload.text}`);
             }
             else if (envelope.type === MessageType.ERROR) {
                 console.log(`[ERROR - ${envelope.payload.code}]: ${envelope.payload.message}`);
