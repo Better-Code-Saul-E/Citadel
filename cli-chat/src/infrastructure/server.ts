@@ -5,6 +5,7 @@ import { ErrorCode } from '../domain/errors/ErrorCode';
 import { JoinUserUseCase } from '../application/useCases/JoinUserUseCase';
 import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
 import { User } from '../domain/entities/User';
+import { createEnvelope } from '../shared/utils/createEnvelope';
 
 const PORT = 4000;
 
@@ -36,13 +37,10 @@ const server = net.createServer((socket) => {
 
     let buffer = '';
 
-    const welcomeMessage: MessageEnvelope = {
-        type: MessageType.SYSTEM,
-        payload: {
-            message: "Welcome to the Citadel. Please send a JOIN command."
-        },
-        timestamp: new Date().toISOString()
-    };
+    const welcomeMessage: MessageEnvelope = createEnvelope(
+        MessageType.SYSTEM,
+        { message: "Welcome to the Citadel. Please send a JOIN command." }
+    );
 
     sendMessage(welcomeMessage, socket)
 
@@ -87,37 +85,31 @@ const server = net.createServer((socket) => {
                         connectionMap.set(user.id, socket);
                         console.log(`User joined with name: ${username}`);
 
-                        const successResponse: MessageEnvelope = {
-                            type: MessageType.SYSTEM,
-                            payload: {
-                                message: `Welcome, ${username}!`
-                            },
-                            timestamp: new Date().toISOString()
-                        }
+                        const successResponse: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            { message: `Welcome, ${username}!` }
+                        );
 
                         sendMessage(successResponse, socket)
 
-                        broadcast({
-                            type: MessageType.SYSTEM,
-                            payload: {
-                                message: `${username} has entered the Citadel.`
-                            },
-                            timestamp: new Date().toISOString()
-                        }, user);
+                        const broadcastMessage: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            { message: `${username} has entered the Citadel.` }
+                        );
+                        broadcast(broadcastMessage, user);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
                             ? ErrorCode.DUPLICATE_USERNAME
                             : ErrorCode.INVALID_USERNAME;
 
-                        const errorResponse: MessageEnvelope = {
-                            type: MessageType.ERROR,
-                            payload: {
+                        const errorResponse: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
                                 code: errorCode,
                                 message: domainError.message
                             },
-                            timestamp: new Date().toISOString()
-                        }
+                        );
 
                         sendMessage(errorResponse, socket);
                     }
@@ -125,14 +117,13 @@ const server = net.createServer((socket) => {
                     const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
 
                     if (!entry) {
-                        const errorResponse: MessageEnvelope = {
-                            type: MessageType.ERROR,
-                            payload: {
+                        const errorResponse: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
                                 code: ErrorCode.UNAUTHORIZED,
                                 message: "You must JOIN before sending messages."
-                            },
-                            timestamp: new Date().toISOString()
-                        }
+                            }
+                        );
 
                         sendMessage(errorResponse, socket)
 
@@ -154,14 +145,13 @@ const server = net.createServer((socket) => {
 
                     console.log(`[${username}]: ${envelope.payload.text}`);
 
-                    const broadcastMessage: MessageEnvelope = {
-                        type: MessageType.MESSAGE,
-                        payload: {
+                    const broadcastMessage: MessageEnvelope = createEnvelope(
+                        MessageType.MESSAGE,
+                        {
                             username: username,
                             text: envelope.payload.text
-                        },
-                        timestamp: new Date().toISOString()
-                    }
+                        }
+                    );
 
                     broadcast(broadcastMessage, senderUser);
                 }
@@ -169,14 +159,14 @@ const server = net.createServer((socket) => {
             } catch (err: any) {
                 console.error(`Protocol violation: ${err.message}`);
 
-                const errorResponse: MessageEnvelope = {
-                    type: MessageType.ERROR,
-                    payload: {
+                const errorResponse: MessageEnvelope = createEnvelope(
+                    MessageType.ERROR,
+                    {
                         code: ErrorCode.INVALID_PROTOCOL,
                         message: err.message || "Expected valid JSON MessageEnvelope"
-                    },
-                    timestamp: new Date().toISOString()
-                }
+                    }
+                );
+
                 sendMessage(errorResponse, socket);
             }
         }
@@ -196,13 +186,12 @@ const server = net.createServer((socket) => {
 
             console.log(`${username} disconnected. Total users; ${connectionMap.size}`);
 
-            const disonnectMessage: MessageEnvelope = {
-                type: MessageType.SYSTEM,
-                payload: {
+            const disonnectMessage: MessageEnvelope = createEnvelope(
+                MessageType.SYSTEM,
+                {
                     message: `${username} has left the Citadel.`
-                },
-                timestamp: new Date().toISOString()
-            }
+                }
+            );
 
             if (user) {
                 broadcast(disonnectMessage, user);

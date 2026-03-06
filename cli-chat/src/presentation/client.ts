@@ -2,6 +2,7 @@ import net from 'net';
 import readline from 'readline';
 import { MessageType } from '../domain/enums/MessageType';
 import { MessageEnvelope } from '../domain/types/MessageEnvelope';
+import { createEnvelope } from '../shared/utils/createEnvelope';
 
 const PORT = 4000;
 const HOST = '127.0.0.1';
@@ -17,13 +18,7 @@ let buffer = '';
 let currentUsername = '';
 let isJoined = false;
 
-function sendEnvelope(type: MessageType, payload: any) {
-    const envelope: MessageEnvelope = {
-        type,
-        payload,
-        timestamp: new Date().toISOString()
-    };
-
+function sendEnvelope(envelope: MessageEnvelope) {
     client.write(JSON.stringify(envelope) + '\n');
 }
 
@@ -52,12 +47,14 @@ client.on('data', (chunk) => {
                     rl.question('Enter your username: ', (name) => {
                         currentUsername = name.trim();
 
-                        sendEnvelope(
+                        const joinEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.JOIN,
                             {
                                 username: currentUsername
                             }
                         );
+
+                        sendEnvelope(joinEnvelope);
                     });
                 }
                 else if (!isJoined && envelope.payload.message.includes("Welcome,")) {
@@ -76,12 +73,14 @@ client.on('data', (chunk) => {
                     rl.question('Try a different username: ', (name) => {
                         currentUsername = name.trim();
 
-                        sendEnvelope(
+                        const joinErrorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.JOIN,
                             {
                                 username: currentUsername
                             }
-                        );
+                        )
+
+                        sendEnvelope(joinErrorEnvelope);
                     });
                 }
             }
@@ -112,20 +111,23 @@ rl.on('line', (input) => {
     if (text.startsWith('/join ')) {
         const requestedName = text.substring(6).trim();
         currentUsername = requestedName;
-        sendEnvelope(
+
+        const joinEnvelope: MessageEnvelope = createEnvelope(
             MessageType.JOIN,
             {
                 username: requestedName
             }
-        );
+        )
+        sendEnvelope(joinEnvelope);
     }
     else if (isJoined) {
-        sendEnvelope(
+        const messageEnvelope: MessageEnvelope = createEnvelope(
             MessageType.MESSAGE,
             {
                 text
             }
         );
+        sendEnvelope(messageEnvelope);
     }
     else {
         console.log(`[CLIENT]: You must type /join <username> to enter the chat.`);
