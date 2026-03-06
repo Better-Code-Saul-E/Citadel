@@ -37,12 +37,12 @@ const server = net.createServer((socket) => {
 
     let buffer = '';
 
-    const welcomeMessage: MessageEnvelope = createEnvelope(
+    const welcomeEnvelope: MessageEnvelope = createEnvelope(
         MessageType.SYSTEM,
         { message: "Welcome to the Citadel. Please send a JOIN command." }
     );
 
-    sendMessage(welcomeMessage, socket)
+    sendMessage(welcomeEnvelope, socket)
 
     socket.on('data', (chunk) => {
         buffer += chunk.toString();
@@ -85,25 +85,25 @@ const server = net.createServer((socket) => {
                         connectionMap.set(user.id, socket);
                         console.log(`User joined with name: ${username}`);
 
-                        const successResponse: MessageEnvelope = createEnvelope(
+                        const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             { message: `Welcome, ${username}!` }
                         );
 
-                        sendMessage(successResponse, socket)
+                        sendMessage(successEnvelope, socket)
 
-                        const broadcastMessage: MessageEnvelope = createEnvelope(
+                        const broadcastEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             { message: `${username} has entered the Citadel.` }
                         );
-                        broadcast(broadcastMessage, user);
+                        broadcast(broadcastEnvelope, user);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
                             ? ErrorCode.DUPLICATE_USERNAME
                             : ErrorCode.INVALID_USERNAME;
 
-                        const errorResponse: MessageEnvelope = createEnvelope(
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
                                 code: errorCode,
@@ -111,13 +111,13 @@ const server = net.createServer((socket) => {
                             },
                         );
 
-                        sendMessage(errorResponse, socket);
+                        sendMessage(errorEnvelope, socket);
                     }
                 } else if (envelope.type === MessageType.MESSAGE) {
                     const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
 
                     if (!entry) {
-                        const errorResponse: MessageEnvelope = createEnvelope(
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
                                 code: ErrorCode.UNAUTHORIZED,
@@ -125,7 +125,7 @@ const server = net.createServer((socket) => {
                             }
                         );
 
-                        sendMessage(errorResponse, socket)
+                        sendMessage(errorEnvelope, socket)
 
                         continue;
                     }
@@ -145,7 +145,7 @@ const server = net.createServer((socket) => {
 
                     console.log(`[${username}]: ${envelope.payload.text}`);
 
-                    const broadcastMessage: MessageEnvelope = createEnvelope(
+                    const broadcastEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
                         {
                             username: username,
@@ -153,13 +153,13 @@ const server = net.createServer((socket) => {
                         }
                     );
 
-                    broadcast(broadcastMessage, senderUser);
+                    broadcast(broadcastEnvelope, senderUser);
                 }
 
             } catch (err: any) {
                 console.error(`Protocol violation: ${err.message}`);
 
-                const errorResponse: MessageEnvelope = createEnvelope(
+                const errorEnvelope: MessageEnvelope = createEnvelope(
                     MessageType.ERROR,
                     {
                         code: ErrorCode.INVALID_PROTOCOL,
@@ -167,7 +167,7 @@ const server = net.createServer((socket) => {
                     }
                 );
 
-                sendMessage(errorResponse, socket);
+                sendMessage(errorEnvelope, socket);
             }
         }
     });
@@ -186,7 +186,7 @@ const server = net.createServer((socket) => {
 
             console.log(`${username} disconnected. Total users; ${connectionMap.size}`);
 
-            const disonnectMessage: MessageEnvelope = createEnvelope(
+            const disonnectEnvelope: MessageEnvelope = createEnvelope(
                 MessageType.SYSTEM,
                 {
                     message: `${username} has left the Citadel.`
@@ -194,7 +194,7 @@ const server = net.createServer((socket) => {
             );
 
             if (user) {
-                broadcast(disonnectMessage, user);
+                broadcast(disonnectEnvelope, user);
             }
 
         }
