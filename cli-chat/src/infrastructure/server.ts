@@ -74,8 +74,10 @@ const server = net.createServer((socket) => {
                             throw new Error("JOIN payload must contain a username");
                         }
 
+                        const result = "";
+                        
                         const username = new Username(envelope.payload.username);
-                        const nameString = username.getValue()
+                        const nameString = username.value
 
                         for (const existingName of connectedClients.values()) {
                             if (existingName === nameString) {
@@ -84,12 +86,12 @@ const server = net.createServer((socket) => {
                         }
 
                         connectedClients.set(socket, nameString);
-                        console.log(`User joined with name: ${username.getValue()}`);
+                        console.log(`User joined with name: ${username.value}`);
 
                         const successResponse: MessageEnvelope = {
                             type: MessageType.SYSTEM,
                             payload: {
-                                message: `Welcome, ${username.getValue()}!`
+                                message: `Welcome, ${username.value}!`
                             },
                             timestamp: new Date().toISOString()
                         }
