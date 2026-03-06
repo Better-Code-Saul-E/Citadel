@@ -13,22 +13,22 @@ const connectionMap = new Map<string, net.Socket>();
 const userRepository = new InMemoryUserRepository();
 const joinUserUseCase = new JoinUserUseCase(userRepository);
 
-function convertEnvelopeToJson(envelope: MessageEnvelope) {
+function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
 }
 
-function broadcast(envelope: MessageEnvelope, senderUser: User) {
+function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
     for (const [userId, clientSocket] of connectionMap.entries()) {
         const user = userRepository.getById(userId);
 
         if (userId !== senderUser.id) {
-            clientSocket.write(convertEnvelopeToJson(envelope));
+            clientSocket.write(serializeEnvelope(envelope));
         }
     }
 }
 
-function sendMessage(envelope: MessageEnvelope, socket: net.Socket) {
-    return socket.write(convertEnvelopeToJson(envelope));
+function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
+    return socket.write(serializeEnvelope(envelope));
 }
 
 
@@ -42,7 +42,7 @@ const server = net.createServer((socket) => {
         { message: "Welcome to the Citadel. Please send a JOIN command." }
     );
 
-    sendMessage(welcomeEnvelope, socket)
+    sendEnvelope(welcomeEnvelope, socket)
 
     socket.on('data', (chunk) => {
         buffer += chunk.toString();
@@ -90,13 +90,13 @@ const server = net.createServer((socket) => {
                             { message: `Welcome, ${username}!` }
                         );
 
-                        sendMessage(successEnvelope, socket)
+                        sendEnvelope(successEnvelope, socket)
 
-                        const broadcastEnvelope: MessageEnvelope = createEnvelope(
+                        const broadcastEnvelopeEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             { message: `${username} has entered the Citadel.` }
                         );
-                        broadcast(broadcastEnvelope, user);
+                        broadcastEnvelope(broadcastEnvelopeEnvelope, user);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
@@ -111,7 +111,7 @@ const server = net.createServer((socket) => {
                             },
                         );
 
-                        sendMessage(errorEnvelope, socket);
+                        sendEnvelope(errorEnvelope, socket);
                     }
                 } else if (envelope.type === MessageType.MESSAGE) {
                     const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
@@ -125,7 +125,7 @@ const server = net.createServer((socket) => {
                             }
                         );
 
-                        sendMessage(errorEnvelope, socket)
+                        sendEnvelope(errorEnvelope, socket)
 
                         continue;
                     }
@@ -145,7 +145,7 @@ const server = net.createServer((socket) => {
 
                     console.log(`[${username}]: ${envelope.payload.text}`);
 
-                    const broadcastEnvelope: MessageEnvelope = createEnvelope(
+                    const broadcastEnvelopeEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
                         {
                             username: username,
@@ -153,7 +153,7 @@ const server = net.createServer((socket) => {
                         }
                     );
 
-                    broadcast(broadcastEnvelope, senderUser);
+                    broadcastEnvelope(broadcastEnvelopeEnvelope, senderUser);
                 }
 
             } catch (err: any) {
@@ -167,7 +167,7 @@ const server = net.createServer((socket) => {
                     }
                 );
 
-                sendMessage(errorEnvelope, socket);
+                sendEnvelope(errorEnvelope, socket);
             }
         }
     });
@@ -194,7 +194,7 @@ const server = net.createServer((socket) => {
             );
 
             if (user) {
-                broadcast(disonnectEnvelope, user);
+                broadcastEnvelope(disonnectEnvelope, user);
             }
 
         }
