@@ -6,6 +6,7 @@ import { JoinUserUseCase } from '../application/useCases/JoinUserUseCase';
 import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
 import { User } from '../domain/entities/User';
 import { createEnvelope } from '../shared/utils/createEnvelope';
+import { serverLogger } from './logger/ServerLogger';
 
 const PORT = 4000;
 
@@ -32,7 +33,7 @@ function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
 
 
 const server = net.createServer((socket) => {
-    console.log(`New client connected from ${socket.remoteAddress}`);
+    serverLogger.info(`New client connected from ${socket.remoteAddress}`);
 
     let buffer = '';
 
@@ -82,7 +83,8 @@ const server = net.createServer((socket) => {
 
 
                         connectionMap.set(user.id, socket);
-                        console.log(`User joined with name: ${username}`);
+
+                        serverLogger.info(`User joined with name: ${username}`);
 
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
@@ -142,7 +144,7 @@ const server = net.createServer((socket) => {
                         throw new Error("MESSAGE payload must contain 'text'.");
                     }
 
-                    console.log(`[${username}]: ${envelope.payload.text}`);
+                    serverLogger.info(`[${username}]: ${envelope.payload.text}`);
 
                     const messageEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
@@ -156,7 +158,7 @@ const server = net.createServer((socket) => {
                 }
 
             } catch (err: any) {
-                console.error(`Protocol violation: ${err.message}`);
+                serverLogger.warn(`Protocol violation: ${err.message}`);
 
                 const errorEnvelope: MessageEnvelope = createEnvelope(
                     MessageType.ERROR,
@@ -183,7 +185,7 @@ const server = net.createServer((socket) => {
             connectionMap.delete(userId);
             userRepository.remove(userId);
 
-            console.log(`${username} disconnected. Total users; ${connectionMap.size}`);
+            serverLogger.info(`${username} disconnected. Total users; ${connectionMap.size}`);
 
             const disconnectEnvelope: MessageEnvelope = createEnvelope(
                 MessageType.SYSTEM,
@@ -200,11 +202,11 @@ const server = net.createServer((socket) => {
     });
 
     socket.on('error', (err) => {
-        console.error('Socket error:', err.message);
+        serverLogger.error(`Socket error: ${err.message}`);
     });
 
 });
 
 server.listen(PORT, () => {
-    console.log(`TCP Server engine fired up and listening on port ${PORT}...`);
+    serverLogger.info(`TCP Server engine fired up and listening on port ${PORT}...`);
 });

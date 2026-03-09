@@ -3,6 +3,7 @@ import readline from 'readline';
 import { MessageType } from '../domain/enums/MessageType';
 import { MessageEnvelope } from '../domain/types/MessageEnvelope';
 import { createEnvelope } from '../shared/utils/createEnvelope';
+import { clientLogger } from './output/ClientLogger';
 
 const PORT = 4000;
 const HOST = '127.0.0.1';
@@ -23,7 +24,7 @@ function sendEnvelope(envelope: MessageEnvelope) {
 }
 
 client.connect(PORT, HOST, () => {
-    console.log(`Connected to the Citadel Server.\n`);
+    clientLogger.info(`Connected to the Citadel Server.\n`);
 });
 
 client.on('data', (chunk) => {
@@ -40,7 +41,7 @@ client.on('data', (chunk) => {
             const envelope: MessageEnvelope = JSON.parse(rawData);
 
             if (envelope.type === MessageType.SYSTEM) {
-                console.log(`[SYSTEM]: ${envelope.payload.message}`);
+                clientLogger.info(`[SYSTEM]: ${envelope.payload.message}`);
 
 
                 if (!isJoined && envelope.payload.message.includes("JOIN COMMAND")) {
@@ -64,10 +65,10 @@ client.on('data', (chunk) => {
 
             }
             else if (envelope.type === MessageType.MESSAGE) {
-                console.log(`[${envelope.payload.username}]: ${envelope.payload.text}`);
+                clientLogger.info(`[${envelope.payload.username}]: ${envelope.payload.text}`);
             }
             else if (envelope.type === MessageType.ERROR) {
-                console.log(`[ERROR - ${envelope.payload.code}]: ${envelope.payload.message}`);
+                clientLogger.error(`[ERROR - ${envelope.payload.code}]: ${envelope.payload.message}`);
 
                 if (!isJoined && (envelope.payload.code === 'INVALID_USERNAME' || envelope.payload.code === 'DUPLICATE_USERNAME')) {
                     rl.question('Try a different username: ', (name) => {
@@ -90,13 +91,13 @@ client.on('data', (chunk) => {
             }
 
         } catch (err) {
-            console.error('Failed to parse incomming message:', rawData);
+            clientLogger.error(`Failed to parse incomming message: ${rawData}`);
         }
     }
 });
 
 client.on('close', () => {
-    console.log('\n Disonnected from server.');
+    clientLogger.warn('\n Disonnected from server.');
     process.exit(0);
 });
 
@@ -130,7 +131,7 @@ rl.on('line', (input) => {
         sendEnvelope(messageEnvelope);
     }
     else {
-        console.log(`[CLIENT]: You must type /join <username> to enter the chat.`);
+        clientLogger.warn(`[CLIENT]: You must type /join <username> to enter the chat.`);
     }
 
     rl.prompt();
