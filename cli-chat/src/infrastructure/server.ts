@@ -91,11 +91,11 @@ const server = net.createServer((socket) => {
 
                         sendEnvelope(successEnvelope, socket)
 
-                        const broadcastEnvelopeEnvelope: MessageEnvelope = createEnvelope(
+                        const userJoinedEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             { message: `${username} has entered the Citadel.` }
                         );
-                        broadcastEnvelope(broadcastEnvelopeEnvelope, user);
+                        broadcastEnvelope(userJoinedEnvelope, user);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
@@ -144,7 +144,7 @@ const server = net.createServer((socket) => {
 
                     console.log(`[${username}]: ${envelope.payload.text}`);
 
-                    const broadcastEnvelopeEnvelope: MessageEnvelope = createEnvelope(
+                    const messageEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
                         {
                             username: username,
@@ -152,7 +152,7 @@ const server = net.createServer((socket) => {
                         }
                     );
 
-                    broadcastEnvelope(broadcastEnvelopeEnvelope, senderUser);
+                    broadcastEnvelope(messageEnvelope, senderUser);
                 }
 
             } catch (err: any) {
