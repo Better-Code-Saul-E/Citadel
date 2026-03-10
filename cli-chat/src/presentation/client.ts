@@ -41,7 +41,7 @@ client.on('data', (chunk) => {
             const envelope: MessageEnvelope = JSON.parse(rawData);
 
             if (envelope.type === MessageType.SYSTEM) {
-                clientLogger.info(`[SYSTEM]: ${envelope.payload.message}`);
+                clientLogger.system(envelope.payload.message);
 
 
                 if (!isJoined && envelope.payload.message.includes("JOIN COMMAND")) {
@@ -65,10 +65,10 @@ client.on('data', (chunk) => {
 
             }
             else if (envelope.type === MessageType.MESSAGE) {
-                clientLogger.info(`[${envelope.payload.username}]: ${envelope.payload.text}`);
+                clientLogger.message(envelope.payload.username, envelope.payload.text);
             }
             else if (envelope.type === MessageType.ERROR) {
-                clientLogger.error(`[ERROR - ${envelope.payload.code}]: ${envelope.payload.message}`);
+                clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
 
                 if (!isJoined && (envelope.payload.code === 'INVALID_USERNAME' || envelope.payload.code === 'DUPLICATE_USERNAME')) {
                     rl.question('Try a different username: ', (name) => {
@@ -91,13 +91,13 @@ client.on('data', (chunk) => {
             }
 
         } catch (err) {
-            clientLogger.error(`Failed to parse incomming message: ${rawData}`);
+            clientLogger.error(`Failed to parse incoming message: ${rawData}`);
         }
     }
 });
 
 client.on('close', () => {
-    clientLogger.warn('\n Disonnected from server.');
+    clientLogger.warn("Disonnected from server.");
     process.exit(0);
 });
 
@@ -131,7 +131,7 @@ rl.on('line', (input) => {
         sendEnvelope(messageEnvelope);
     }
     else {
-        clientLogger.warn(`[CLIENT]: You must type /join <username> to enter the chat.`);
+        clientLogger.warn("You must type /join <username> to enter the chat.");
     }
 
     rl.prompt();

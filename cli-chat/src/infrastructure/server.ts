@@ -144,7 +144,7 @@ const server = net.createServer((socket) => {
                         throw new Error("MESSAGE payload must contain 'text'.");
                     }
 
-                    serverLogger.info(`[${username}]: ${envelope.payload.text}`);
+                    serverLogger.info(`Message from ${username}: ${envelope.payload.text}`);
 
                     const messageEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
