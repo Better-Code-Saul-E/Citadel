@@ -1,4 +1,5 @@
 import { Logger } from "../../shared/types/Logger";
+import { getTimeStamp } from "../../shared/utils/getTimeStamp";
 
 class ServerLogger implements Logger {
     public info(message: string): void {
@@ -12,8 +13,7 @@ class ServerLogger implements Logger {
     }
 
     private format(level: string, message: string): string {
-        const date = new Date();
-        return `[${date.toLocaleDateString()} ${date.toLocaleTimeString()}] [${level}] [SERVER] ${message}`;
+        return `[${getTimeStamp()}] [${level}] [SERVER] ${message}`;
     }  
 }
 
