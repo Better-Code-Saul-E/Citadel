@@ -97,7 +97,7 @@ client.on('data', (chunk) => {
 });
 
 client.on('close', () => {
-    clientLogger.warn("Disonnected from server.");
+    clientLogger.warn("Disconnected from server.");
     process.exit(0);
 });
 
