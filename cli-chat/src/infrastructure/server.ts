@@ -7,12 +7,14 @@ import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
 import { User } from '../domain/entities/User';
 import { createEnvelope } from '../shared/utils/createEnvelope';
 import { serverLogger } from './logger/ServerLogger';
+import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
 
 const PORT = 4000;
 
 const connectionMap = new Map<string, net.Socket>();
 const userRepository = new InMemoryUserRepository();
 const userJoinUseCase = new UserJoinUseCase(userRepository);
+const sendMessageUseCase = new SendMessageUseCase(userRepository);
 
 function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
@@ -132,28 +134,19 @@ const server = net.createServer((socket) => {
                     }
 
                     const [userId] = entry;
-                    const senderUser = userRepository.getById(userId);
-                    if (!senderUser) {
-                        continue;
-                    }
+                    const sender = sendMessageUseCase.execute(userId, envelope.payload.text);
 
-                    const username = senderUser.username.value;
-
-                    if (!envelope.payload.text) {
-                        throw new Error("MESSAGE payload must contain 'text'.");
-                    }
-
-                    serverLogger.info(`Message from ${username}: ${envelope.payload.text}`);
+                    serverLogger.info(`Message from ${sender.username}: ${sender.text}`);
 
                     const messageEnvelope: MessageEnvelope = createEnvelope(
                         MessageType.MESSAGE,
                         {
-                            username: username,
-                            text: envelope.payload.text
+                            username: sender.username,
+                            text: sender.text
                         }
                     );
 
-                    broadcastEnvelope(messageEnvelope, senderUser);
+                    broadcastEnvelope(messageEnvelope, sender.user);
                 }
 
             } catch (err: any) {
