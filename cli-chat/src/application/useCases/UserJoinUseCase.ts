@@ -3,7 +3,7 @@ import { v4 as uuid } from "uuid";
 import { Username } from "../../domain/valueObjects/Username";
 import { User } from "../../domain/entities/User";
 
-export class JoinUserUseCase {
+export class UserJoinUseCase {
     private _userRepository: UserRepository
 
     constructor(userRespository: UserRepository) {

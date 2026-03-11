@@ -2,7 +2,7 @@ import net from 'net';
 import { MessageType } from '../domain/enums/MessageType';
 import { MessageEnvelope } from '../domain/types/MessageEnvelope';
 import { ErrorCode } from '../domain/errors/ErrorCode';
-import { JoinUserUseCase } from '../application/useCases/JoinUserUseCase';
+import { UserJoinUseCase } from '../application/useCases/UserJoinUseCase';
 import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
 import { User } from '../domain/entities/User';
 import { createEnvelope } from '../shared/utils/createEnvelope';
@@ -12,7 +12,7 @@ const PORT = 4000;
 
 const connectionMap = new Map<string, net.Socket>();
 const userRepository = new InMemoryUserRepository();
-const joinUserUseCase = new JoinUserUseCase(userRepository);
+const userJoinUseCase = new UserJoinUseCase(userRepository);
 
 function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
@@ -78,7 +78,7 @@ const server = net.createServer((socket) => {
                             throw new Error("JOIN payload must contain a username");
                         }
 
-                        const user = joinUserUseCase.execute(envelope.payload.username);
+                        const user = userJoinUseCase.execute(envelope.payload.username);
                         const username = user.username.value;
 
 
@@ -130,7 +130,6 @@ const server = net.createServer((socket) => {
 
                         continue;
                     }
-
 
                     const [userId] = entry;
                     const senderUser = userRepository.getById(userId);
