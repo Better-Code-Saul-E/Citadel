@@ -1,5 +1,6 @@
 import { Logger } from "../../shared/types/Logger";
 import { getTimeStamp } from "../../shared/utils/getTimeStamp";
+import { TIMESTAMP_COLOR, colorizeLevel } from "../../shared/utils/colorize";
 
 class ClientLogger implements Logger {
     public info(message: string): void {
@@ -20,7 +21,7 @@ class ClientLogger implements Logger {
 
     private format(level: string, message: string): string {
         const date = new Date();
-        return `[${getTimeStamp()}] [${level}] ${message}`;
+        return `[${TIMESTAMP_COLOR(getTimeStamp())}] [${colorizeLevel(level)}] ${message}`;
     }
 }
 

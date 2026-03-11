@@ -1,5 +1,6 @@
 import { Logger } from "../../shared/types/Logger";
 import { getTimeStamp } from "../../shared/utils/getTimeStamp";
+import { TIMESTAMP_COLOR, colorizeLevel, colorizeTag } from "../../shared/utils/colorize";
 
 class ServerLogger implements Logger {
     public info(message: string): void {
@@ -13,7 +14,7 @@ class ServerLogger implements Logger {
     }
 
     private format(level: string, message: string): string {
-        return `[${getTimeStamp()}] [${level}] [SERVER] ${message}`;
+        return `[${TIMESTAMP_COLOR(getTimeStamp())}] [${colorizeLevel(level)}] [${colorizeTag("SERVER")}] ${message}`;
     }  
 }
 
