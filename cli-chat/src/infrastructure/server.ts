@@ -8,6 +8,7 @@ import { User } from '../domain/entities/User';
 import { createEnvelope } from '../shared/utils/createEnvelope';
 import { serverLogger } from './logger/ServerLogger';
 import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
+import { UserDisconnectUseCase } from '../application/useCases/UserDisconnectUseCase';
 
 const PORT = 4000;
 
@@ -15,6 +16,7 @@ const connectionMap = new Map<string, net.Socket>();
 const userRepository = new InMemoryUserRepository();
 const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
+const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
 
 function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
@@ -171,11 +173,14 @@ const server = net.createServer((socket) => {
         if (entry) {
             const [userId] = entry;
 
-            const user = userRepository.getById(userId);
-            const username = user?.username.value
-
+            const user = userDisconnectUseCase.execute(userId);
             connectionMap.delete(userId);
-            userRepository.remove(userId);
+
+            if (!user) {
+                return;
+            }
+
+            const username = user.username.value;
 
             serverLogger.info(`${username} disconnected. Total users; ${connectionMap.size}`);
 
@@ -186,10 +191,7 @@ const server = net.createServer((socket) => {
                 }
             );
 
-            if (user) {
-                broadcastEnvelope(disconnectEnvelope, user);
-            }
-
+            broadcastEnvelope(disconnectEnvelope, user);
         }
     });
 
