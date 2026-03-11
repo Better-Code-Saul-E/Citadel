@@ -2,7 +2,7 @@ import chalk, { ChalkInstance } from "chalk";
 import { LogLevel } from "../types/LogLevel";
 import { LogTag } from "../types/LogTag";
 
-export const TIMESTAMP_COLOR = chalk.gray;
+export const TIMESTAMP_COLORIZER = chalk.gray;
 
 const LOG_LEVEL_COLORS: Record<LogLevel, ChalkInstance> = {
     [LogLevel.INFO]: chalk.blue,
