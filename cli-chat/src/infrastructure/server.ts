@@ -182,7 +182,7 @@ const server = net.createServer((socket) => {
 
             const username = user.username.value;
 
-            serverLogger.info(`${username} disconnected. Total users; ${connectionMap.size}`);
+            serverLogger.info(`${username} disconnected. Total users: ${connectionMap.size}`);
 
             const disconnectEnvelope: MessageEnvelope = createEnvelope(
                 MessageType.SYSTEM,
