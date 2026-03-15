@@ -67,6 +67,9 @@ client.on('data', (chunk) => {
             else if (envelope.type === MessageType.MESSAGE) {
                 clientLogger.message(envelope.payload.username, envelope.payload.text);
             }
+            else if (envelope.type === MessageType.WHISPER) {
+                clientLogger.whisper(envelope.payload.username, envelope.payload.text);
+            }
             else if (envelope.type === MessageType.ERROR) {
                 clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
 
@@ -120,6 +123,24 @@ rl.on('line', (input) => {
             }
         )
         sendEnvelope(joinEnvelope);
+    }
+    else if (isJoined && text.startsWith('/whisper ')) {
+        const payloadText = text.substring(9).trim();
+        const divider = payloadText.indexOf(' ');
+
+        if (divider === -1) {
+            clientLogger.warn("Invalid format. Use: /whisper <username> <message>");
+        } else {
+            const whisperEnvelope: MessageEnvelope = createEnvelope(
+                MessageType.WHISPER,
+                {
+                    username: currentUsername,
+                    recipient: payloadText.slice(0, divider),
+                    text: payloadText.slice(divider + 1)
+                }
+            );
+            sendEnvelope(whisperEnvelope);
+        }
     }
     else if (isJoined) {
         const messageEnvelope: MessageEnvelope = createEnvelope(

@@ -18,6 +18,11 @@ export class InMemoryUserRepository implements UserRepository {
             user => user.id === userId
         );
     }
+    getByUsername(username: string): User | undefined {
+        return this.clients.find(
+            user => user.username.value === username
+        );
+    }
     isUsernameTaken(username: Username): boolean {
         return this.clients.some(
             user => user.username.value === username.value

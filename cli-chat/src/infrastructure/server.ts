@@ -30,6 +30,14 @@ function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
         }
     }
 }
+function whisperEnvelope(envelope: MessageEnvelope, senderUser: User) {
+    for (const [userId, clientSocket] of connectionMap.entries()) {
+
+        if (userId === senderUser.id) {
+            clientSocket.write(serializeEnvelope(envelope));
+        }
+    }
+}
 
 function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
     return socket.write(serializeEnvelope(envelope));
@@ -149,6 +157,53 @@ const server = net.createServer((socket) => {
                     );
 
                     broadcastEnvelope(messageEnvelope, sender.user);
+                } else if (envelope.type == MessageType.WHISPER) {
+                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+
+                    if (!entry) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: "You must JOIN before sending messages."
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket)
+
+                        continue;
+                    }
+
+                    const recipient = userRepository.getByUsername(envelope.payload.recipient);
+
+                    if (!recipient) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.USER_NOT_FOUND,
+                                message: "Recipient does not exists"
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket)
+
+                        continue;
+                    }
+
+                    const [userId] = entry;
+                    const sender = sendMessageUseCase.execute(userId, envelope.payload.text);
+
+                    serverLogger.info(`Message from ${sender.username} to ${recipient.username}: ${sender.text}`);
+
+                    const messageEnvelope: MessageEnvelope = createEnvelope(
+                        MessageType.WHISPER,
+                        {
+                            username: sender.username,
+                            text: sender.text
+                        }
+                    );
+
+                    whisperEnvelope(messageEnvelope, recipient);
                 }
 
             } catch (err: any) {

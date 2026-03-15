@@ -20,6 +20,9 @@ class ClientLogger implements Logger {
     public message(username: string, text: string): void {
         console.log(`${username}: ${text}`);
     }
+    public whisper(username: string, text: string): void {
+        console.log(`[WHISPER from ${username}]: ${text}`);
+    }
 }
 
 export const clientLogger = new ClientLogger();
