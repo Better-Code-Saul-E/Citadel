@@ -30,12 +30,11 @@ function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
         }
     }
 }
-function whisperEnvelope(envelope: MessageEnvelope, senderUser: User) {
-    for (const [userId, clientSocket] of connectionMap.entries()) {
+function whisperEnvelope(envelope: MessageEnvelope, userId: string) {
+    const socket = connectionMap.get(userId);
 
-        if (userId === senderUser.id) {
-            clientSocket.write(serializeEnvelope(envelope));
-        }
+    if(socket){
+        sendEnvelope(envelope, socket);
     }
 }
 
@@ -203,7 +202,7 @@ const server = net.createServer((socket) => {
                         }
                     );
 
-                    whisperEnvelope(messageEnvelope, recipient);
+                    whisperEnvelope(messageEnvelope, recipient.id);
                 }
 
             } catch (err: any) {
