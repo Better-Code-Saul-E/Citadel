@@ -3,32 +3,33 @@ import { User } from "../../domain/entities/User";
 import { Username } from "../../domain/valueObjects/Username";
 
 export class InMemoryUserRepository implements UserRepository {
-    private clients: User[] = [];
+    private usersById = new Map<string, User>();
+    private usersByUsername = new Map<string, User>();
 
     add(user: User): void {
-        this.clients.push(user);
+        this.usersById.set(user.id, user);
+        this.usersByUsername.set(user.username.value, user);
     }
     remove(userId: string): void {
-        this.clients = this.clients.filter(
-            user => user.id !== userId
-        );
+        const user = this.usersById.get(userId);
+
+        if (!user) {
+            return;
+        }
+
+        this.usersById.delete(userId);
+        this.usersByUsername.delete(user.username.value);
     }
     getById(userId: string): User | undefined {
-        return this.clients.find(
-            user => user.id === userId
-        );
+        return this.usersById.get(userId);
     }
     getByUsername(username: string): User | undefined {
-        return this.clients.find(
-            user => user.username.value === username
-        );
+        return this.usersByUsername.get(username);
     }
     isUsernameTaken(username: Username): boolean {
-        return this.clients.some(
-            user => user.username.value === username.value
-        );
+        return this.usersByUsername.has(username.value);
     }
     getAll(): User[] {
-        return this.clients;
+        return Array.from(this.usersById.values());
     }
 }
