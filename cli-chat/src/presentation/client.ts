@@ -62,6 +62,8 @@ client.on('data', (chunk) => {
                 else if (!isJoined && envelope.payload.message.includes("Welcome,")) {
                     isJoined = true;
                     rl.prompt();
+                } else if (isJoined && envelope.payload.message.includes("entered the room")){
+                    currentRoom = envelope.payload.room;
                 }
 
             }
@@ -152,8 +154,6 @@ rl.on('line', (input) => {
 
         let roomName = roomDetails[0];
         let roomLimit = parseInt(roomDetails[1]) || 10;
-        
-        currentRoom = roomName;
 
         const roomEnvelope: MessageEnvelope = createEnvelope(
             MessageType.ROOM_JOIN,

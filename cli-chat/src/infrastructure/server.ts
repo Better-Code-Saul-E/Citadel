@@ -275,7 +275,8 @@ const server = net.createServer((socket) => {
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             {
-                                message: `You have entered the room: ${room.name}`
+                                message: `You have entered the room: ${room.name}`,
+                                room: room.name
                             }
                         );
 
