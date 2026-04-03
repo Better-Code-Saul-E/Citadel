@@ -265,7 +265,7 @@ const server = net.createServer((socket) => {
 
                     if (!room) {
                         const id: string = uuidv4();
-                        room = new Room(id, envelope.payload.room);
+                        room = new Room(id, envelope.payload.room, envelope.payload.limit);
                         roomRepository.add(room);
                     }
                     try {

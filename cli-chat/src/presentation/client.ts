@@ -148,16 +148,22 @@ rl.on('line', (input) => {
         }
     }
     else if (isJoined && text.startsWith('/room ')) {
-        const roomName = text.substring(6).trim();
+        const roomDetails = text.substring(6).trim().split(" ");
+
+        let roomName = roomDetails[0];
+        let roomLimit = parseInt(roomDetails[1]) || 10;
+        
         currentRoom = roomName;
 
         const roomEnvelope: MessageEnvelope = createEnvelope(
             MessageType.ROOM_JOIN,
             {
                 username: currentUsername,
-                room: roomName
+                room: roomName,
+                limit: roomLimit
             }
         );
+
         sendEnvelope(roomEnvelope);
     }
     else if (isJoined) {
