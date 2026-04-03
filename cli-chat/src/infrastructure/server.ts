@@ -9,11 +9,17 @@ import { createEnvelope } from '../shared/utils/createEnvelope';
 import { serverLogger } from './logger/ServerLogger';
 import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
 import { UserDisconnectUseCase } from '../application/useCases/UserDisconnectUseCase';
+import { InMemoryRoomRepository } from './repositories/InMemoryRoomRepository';
+import { v4 as uuidv4 } from 'uuid';
+import { Room } from '../domain/entities/Room';
+
 
 const PORT = 4000;
 
 const connectionMap = new Map<string, net.Socket>();
 const userRepository = new InMemoryUserRepository();
+const roomRepository = new InMemoryRoomRepository();
+
 const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
 const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
@@ -33,7 +39,7 @@ function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
 function whisperEnvelope(envelope: MessageEnvelope, userId: string) {
     const socket = connectionMap.get(userId);
 
-    if(socket){
+    if (socket) {
         sendEnvelope(envelope, socket);
     }
 }
@@ -144,18 +150,45 @@ const server = net.createServer((socket) => {
 
                     const [userId] = entry;
                     const sender = sendMessageUseCase.execute(userId, envelope.payload.text);
+                    const targetRoomName = envelope.payload.room;
 
-                    serverLogger.info(`Message from ${sender.username}: ${sender.text}`);
+                    if (targetRoomName) {
+                        const room = roomRepository.getByName(targetRoomName);
 
-                    const messageEnvelope: MessageEnvelope = createEnvelope(
-                        MessageType.MESSAGE,
-                        {
-                            username: sender.username,
-                            text: sender.text
+                        if (room && room.hasUser(userId)) {
+                            serverLogger.info(`[${room.name}] Message from ${sender.username}: ${sender.text}`);
+
+                            const messageEnvelope: MessageEnvelope = createEnvelope(
+                                MessageType.MESSAGE,
+                                {
+                                    username: sender.username,
+                                    text: sender.text,
+                                    room: room.name
+                                }
+                            );
+
+                            for (const member of room.members) {
+                                if (member.id !== userId) {
+                                    const memberSocket = connectionMap.get(member.id);
+                                    if (memberSocket) {
+                                        sendEnvelope(messageEnvelope, memberSocket);
+                                    }
+                                }
+                            }
                         }
-                    );
+                    } else {
+                        serverLogger.info(`[GLOBAL] Message from ${sender.username}: ${sender.text}`);
 
-                    broadcastEnvelope(messageEnvelope, sender.user);
+                        const messageEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.MESSAGE,
+                            {
+                                username: sender.username,
+                                text: sender.text
+                            }
+                        );
+
+                        broadcastEnvelope(messageEnvelope, sender.user);
+                    }
                 } else if (envelope.type == MessageType.WHISPER) {
                     const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
 
@@ -203,8 +236,64 @@ const server = net.createServer((socket) => {
                     );
 
                     whisperEnvelope(messageEnvelope, recipient.id);
-                }
+                } else if (envelope.type == MessageType.ROOM_JOIN) {
+                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
 
+                    if (!entry) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: "You must JOIN before sending messages."
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket)
+
+                        continue;
+                    }
+
+                    const [userId] = entry;
+                    const user = userRepository.getById(userId);
+
+                    if (!user) {
+                        continue;
+                    }
+
+                    const roomName = envelope.payload.room;
+                    let room = roomRepository.getByName(roomName);
+
+                    if (!room) {
+                        const id: string = uuidv4();
+                        room = new Room(id, envelope.payload.room);
+                        roomRepository.add(room);
+                    }
+                    try {
+                        room.join(user);
+                        serverLogger.info(`${user.username.value} joined room: ${room.name}`);
+
+                        const successEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            {
+                                message: `You have entered the room: ${room.name}`
+                            }
+                        );
+
+                        sendEnvelope(successEnvelope, socket);
+                    }
+                    catch (err: any) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: err.message
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket);
+                    }
+
+                }
             } catch (err: any) {
                 serverLogger.warn(`Protocol violation: ${err.message}`);
 

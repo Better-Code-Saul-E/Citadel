@@ -17,6 +17,7 @@ const rl = readline.createInterface({
 const client = new net.Socket();
 let buffer = '';
 let currentUsername = '';
+let currentRoom: string | undefined = undefined;
 let isJoined = false;
 
 function sendEnvelope(envelope: MessageEnvelope) {
@@ -65,7 +66,11 @@ client.on('data', (chunk) => {
 
             }
             else if (envelope.type === MessageType.MESSAGE) {
-                clientLogger.message(envelope.payload.username, envelope.payload.text);
+                if (envelope.payload.room) {
+                    clientLogger.message(`[${envelope.payload.room}] ${envelope.payload.username}`, envelope.payload.text);
+                } else {
+                    clientLogger.message(envelope.payload.username, envelope.payload.text);
+                }
             }
             else if (envelope.type === MessageType.WHISPER) {
                 clientLogger.whisper(envelope.payload.username, envelope.payload.text);
@@ -142,11 +147,25 @@ rl.on('line', (input) => {
             sendEnvelope(whisperEnvelope);
         }
     }
+    else if (isJoined && text.startsWith('/room ')) {
+        const roomName = text.substring(6).trim();
+        currentRoom = roomName;
+
+        const roomEnvelope: MessageEnvelope = createEnvelope(
+            MessageType.ROOM_JOIN,
+            {
+                username: currentUsername,
+                room: roomName
+            }
+        );
+        sendEnvelope(roomEnvelope);
+    }
     else if (isJoined) {
         const messageEnvelope: MessageEnvelope = createEnvelope(
             MessageType.MESSAGE,
             {
-                text
+                text,
+                room: currentRoom
             }
         );
         sendEnvelope(messageEnvelope);
