@@ -64,6 +64,8 @@ client.on('data', (chunk) => {
                     rl.prompt();
                 } else if (isJoined && envelope.payload.message.includes("entered the room")){
                     currentRoom = envelope.payload.room;
+                } else if (isJoined && envelope.payload.message.includes("returned")){
+                    currentRoom = undefined;
                 }
 
             }
@@ -161,6 +163,21 @@ rl.on('line', (input) => {
                 username: currentUsername,
                 room: roomName,
                 limit: roomLimit
+            }
+        );
+
+        sendEnvelope(roomEnvelope);
+    }
+    else if (isJoined && text.startsWith('/leave ')){
+        const roomDetails = text.substring(6).trim().split(" ");
+
+        let roomName = roomDetails[0];
+
+        const roomEnvelope: MessageEnvelope = createEnvelope(
+            MessageType.ROOM_LEAVE,
+            {
+                username: currentUsername,
+                room: roomName
             }
         );
 

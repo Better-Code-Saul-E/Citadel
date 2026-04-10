@@ -19,6 +19,20 @@ export class JoinRoomUseCase {
             throw new Error("User not found.");
         }
 
+        if(user.currentRoomName){
+            if(user.currentRoomName === roomName){
+                throw new Error(`You are already in the room: ${roomName}.`);
+            }
+
+            const oldRoom = this._roomRepository.getByName(user.currentRoomName);
+            if(oldRoom){
+                oldRoom.leave(user.id);
+
+                if(oldRoom.isEmpty){
+                    this._roomRepository.remove(oldRoom.id);
+                }
+            }
+        }
         let room = this._roomRepository.getByName(roomName);
 
         if(!room){
@@ -28,6 +42,7 @@ export class JoinRoomUseCase {
         }
 
         room.join(user);
+        user.currentRoomName = room.name;
 
         return room;
     }

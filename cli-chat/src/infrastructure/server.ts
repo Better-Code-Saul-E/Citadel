@@ -11,6 +11,7 @@ import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
 import { UserDisconnectUseCase } from '../application/useCases/UserDisconnectUseCase';
 import { InMemoryRoomRepository } from './repositories/InMemoryRoomRepository';
 import { JoinRoomUseCase } from '../application/useCases/JoinRoomUseCase';
+import { LeaveRoomUseCase } from '../application/useCases/LeaveRoomUseCase';
 
 
 const PORT = 4000;
@@ -23,6 +24,7 @@ const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
 const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
 const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
+const leaveRoomUseCase = new LeaveRoomUseCase(roomRepository);
 
 function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
@@ -187,7 +189,13 @@ const server = net.createServer((socket) => {
                             }
                         );
 
-                        broadcastEnvelope(messageEnvelope, sender.user);
+                        for (const [id, currentSocket] of connectionMap.entries()) {
+                            const targetUser = userRepository.getById(id);
+
+                            if (targetUser && targetUser.id !== userId && targetUser.currentRoomName === null) {
+                                sendEnvelope(messageEnvelope, currentSocket);
+                            }
+                        }
                     }
                 } else if (envelope.type == MessageType.WHISPER) {
                     const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
@@ -258,7 +266,7 @@ const server = net.createServer((socket) => {
 
                     try {
                         const room = joinRoomUseCase.execute(userId, envelope.payload.room, envelope.payload.limit);
-                        serverLogger.info(`${user} joined room: ${room.name}`);
+                        serverLogger.info(`${user?.username.value} joined room: ${room.name}`);
 
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
@@ -271,6 +279,75 @@ const server = net.createServer((socket) => {
                         sendEnvelope(successEnvelope, socket);
                     }
                     catch (err: any) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: err.message
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket);
+                    }
+
+                } else if (envelope.type == MessageType.ROOM_LEAVE) {
+                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+
+                    if (!entry) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: "You must JOIN before sending messages."
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket)
+
+                        continue;
+                    }
+
+
+                    const [userId] = entry;
+                    const user = userRepository.getById(userId);
+
+                    const roomToLeave = roomRepository.getByName(envelope.payload.room);
+
+                    try {
+                        leaveRoomUseCase.execute(userId, envelope.payload.room);
+
+                        if (user) {
+                            user.currentRoomName = null;
+                        }
+
+                        serverLogger.info(`${user?.username.value} has returned to the Citadel.`);
+
+                        const successEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            {
+                                message: `You have left the room and returned to the Citadel.`
+                            }
+                        );
+
+                        sendEnvelope(successEnvelope, socket);
+
+                        if (roomToLeave) {
+                            const departureEnvelope: MessageEnvelope = createEnvelope(
+                                MessageType.SYSTEM,
+                                { message: `${user?.username.value} has left the room.` }
+                            );
+
+                            for (const member of roomToLeave.members) {
+                                if (member.id !== userId) {
+                                    const memberSocket = connectionMap.get(member.id);
+                                    if (memberSocket) {
+                                        sendEnvelope(departureEnvelope, memberSocket);
+                                    }
+                                }
+                            }
+                        }
+
+                    } catch (err: any) {
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {

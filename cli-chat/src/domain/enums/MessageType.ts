@@ -3,7 +3,7 @@ export enum MessageType {
     ROOM_JOIN = "ROOM",
     MESSAGE = "MESSAGE",
     WHISPER = "WHISPER",
-    LEAVE = "LEAVE",
+    ROOM_LEAVE = "LEAVE",
     SYSTEM = "SYSTEM",
     ERROR = "ERROR",
     COMMAND = "COMMAND"
