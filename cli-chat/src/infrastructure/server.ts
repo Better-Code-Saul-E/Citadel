@@ -10,8 +10,7 @@ import { serverLogger } from './logger/ServerLogger';
 import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
 import { UserDisconnectUseCase } from '../application/useCases/UserDisconnectUseCase';
 import { InMemoryRoomRepository } from './repositories/InMemoryRoomRepository';
-import { v4 as uuidv4 } from 'uuid';
-import { Room } from '../domain/entities/Room';
+import { JoinRoomUseCase } from '../application/useCases/JoinRoomUseCase';
 
 
 const PORT = 4000;
@@ -23,6 +22,7 @@ const roomRepository = new InMemoryRoomRepository();
 const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
 const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
+const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
 
 function serializeEnvelope(envelope: MessageEnvelope) {
     return JSON.stringify(envelope) + '\n';
@@ -256,21 +256,9 @@ const server = net.createServer((socket) => {
                     const [userId] = entry;
                     const user = userRepository.getById(userId);
 
-                    if (!user) {
-                        continue;
-                    }
-
-                    const roomName = envelope.payload.room;
-                    let room = roomRepository.getByName(roomName);
-
-                    if (!room) {
-                        const id: string = uuidv4();
-                        room = new Room(id, envelope.payload.room, envelope.payload.limit);
-                        roomRepository.add(room);
-                    }
                     try {
-                        room.join(user);
-                        serverLogger.info(`${user.username.value} joined room: ${room.name}`);
+                        const room = joinRoomUseCase.execute(userId, envelope.payload.room, envelope.payload.limit);
+                        serverLogger.info(`${user} joined room: ${room.name}`);
 
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,

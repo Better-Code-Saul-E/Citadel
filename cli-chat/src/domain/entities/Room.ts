@@ -7,14 +7,20 @@ export class Room {
     
     private _members: Map<string, User> = new Map();
 
+    public get isEmpty(): boolean {
+        return this._members.size === 0;
+    }
+    public get members(): User[] {
+        return Array.from(this._members.values());
+    }
+    public get memberCount(): number {
+        return this._members.size;
+    }
+
     constructor(id: string, name: string, limit: number = 10) {
         this.id = id;
         this.name = name;
         this.limit = limit;
-    }
-
-    public get members(): User[] {
-        return Array.from(this._members.values());
     }
 
     public join(user: User): void {
@@ -25,7 +31,11 @@ export class Room {
     }
 
     public leave(userId: string): void {
-        this._members.delete(userId);
+        const wasRemoved = this._members.delete(userId);
+
+        if(!wasRemoved){
+            throw new Error(`User is not in the room ${this.name}`);
+        }
     }
 
     public hasUser(userId: string): boolean {
