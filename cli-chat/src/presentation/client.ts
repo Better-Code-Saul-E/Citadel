@@ -169,7 +169,7 @@ rl.on('line', (input) => {
         sendEnvelope(roomEnvelope);
     }
     else if (isJoined && text.startsWith('/leave ')){
-        const roomDetails = text.substring(6).trim().split(" ");
+        const roomDetails = text.substring(7).trim().split(" ");
 
         let roomName = roomDetails[0];
 
