@@ -17,6 +17,7 @@ import { LeaveRoomUseCase } from '../application/useCases/LeaveRoomUseCase';
 const PORT = 4000;
 
 const connectionMap = new Map<string, net.Socket>();
+const socketToUserId = new Map<net.Socket, string>();
 const userRepository = new InMemoryUserRepository();
 const roomRepository = new InMemoryRoomRepository();
 
@@ -102,6 +103,7 @@ const server = net.createServer((socket) => {
 
 
                         connectionMap.set(user.id, socket);
+                        socketToUserId.set(socket, user.id);
 
                         serverLogger.info(`User joined with name: ${username}`);
 
@@ -134,9 +136,9 @@ const server = net.createServer((socket) => {
                         sendEnvelope(errorEnvelope, socket);
                     }
                 } else if (envelope.type === MessageType.MESSAGE) {
-                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+                    const userId = socketToUserId.get(socket);
 
-                    if (!entry) {
+                    if (!userId) {
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
@@ -150,7 +152,6 @@ const server = net.createServer((socket) => {
                         continue;
                     }
 
-                    const [userId] = entry;
                     const sender = sendMessageUseCase.execute(userId, envelope.payload.text);
                     const targetRoomName = envelope.payload.room;
 
@@ -198,9 +199,9 @@ const server = net.createServer((socket) => {
                         }
                     }
                 } else if (envelope.type == MessageType.WHISPER) {
-                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+                    const userId = socketToUserId.get(socket);
 
-                    if (!entry) {
+                    if (!userId) {
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
@@ -210,7 +211,6 @@ const server = net.createServer((socket) => {
                         );
 
                         sendEnvelope(errorEnvelope, socket)
-
                         continue;
                     }
 
@@ -226,11 +226,9 @@ const server = net.createServer((socket) => {
                         );
 
                         sendEnvelope(errorEnvelope, socket)
-
                         continue;
                     }
 
-                    const [userId] = entry;
                     const sender = sendMessageUseCase.execute(userId, envelope.payload.text);
 
                     serverLogger.info(`Message from ${sender.username} to ${recipient.username}: ${sender.text}`);
@@ -245,9 +243,9 @@ const server = net.createServer((socket) => {
 
                     whisperEnvelope(messageEnvelope, recipient.id);
                 } else if (envelope.type == MessageType.ROOM_JOIN) {
-                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+                    const userId = socketToUserId.get(socket);
 
-                    if (!entry) {
+                    if (!userId) {
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
@@ -261,7 +259,6 @@ const server = net.createServer((socket) => {
                         continue;
                     }
 
-                    const [userId] = entry;
                     const user = userRepository.getById(userId);
 
                     try {
@@ -291,9 +288,9 @@ const server = net.createServer((socket) => {
                     }
 
                 } else if (envelope.type == MessageType.ROOM_LEAVE) {
-                    const entry = [...connectionMap.entries()].find(([userId, s]) => s === socket);
+                    const userId = socketToUserId.get(socket);
 
-                    if (!entry) {
+                    if (!userId) {
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
@@ -307,8 +304,6 @@ const server = net.createServer((socket) => {
                         continue;
                     }
 
-
-                    const [userId] = entry;
                     const user = userRepository.getById(userId);
 
                     const roomToLeave = roomRepository.getByName(envelope.payload.room);
@@ -377,13 +372,13 @@ const server = net.createServer((socket) => {
     });
 
     socket.on('end', () => {
-        const entry = [...connectionMap.entries()].find(([id, s]) => s === socket);
+        const userId = socketToUserId.get(socket);
 
-        if (entry) {
-            const [userId] = entry;
-
+        if (userId) {
             const user = userDisconnectUseCase.execute(userId);
+
             connectionMap.delete(userId);
+            socketToUserId.delete(socket);
 
             if (!user) {
                 return;
