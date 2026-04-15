@@ -51,6 +51,26 @@ function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
     return socket.write(serializeEnvelope(envelope));
 }
 
+function requireAuth(socket: net.Socket): string | null {
+    const userId = socketToUserId.get(socket);
+
+    if (!userId) {
+        const errorEnvelope: MessageEnvelope = createEnvelope(
+            MessageType.ERROR,
+            {
+                code: ErrorCode.UNAUTHORIZED,
+                message: "You must JOIN before sending messages."
+            }
+        );
+
+        sendEnvelope(errorEnvelope, socket)
+
+        return null;
+    }
+
+    return userId;
+}
+
 
 const server = net.createServer((socket) => {
     serverLogger.info(`New client connected from ${socket.remoteAddress}`);
@@ -136,19 +156,9 @@ const server = net.createServer((socket) => {
                         sendEnvelope(errorEnvelope, socket);
                     }
                 } else if (envelope.type === MessageType.MESSAGE) {
-                    const userId = socketToUserId.get(socket);
+                    const userId = requireAuth(socket);
 
                     if (!userId) {
-                        const errorEnvelope: MessageEnvelope = createEnvelope(
-                            MessageType.ERROR,
-                            {
-                                code: ErrorCode.UNAUTHORIZED,
-                                message: "You must JOIN before sending messages."
-                            }
-                        );
-
-                        sendEnvelope(errorEnvelope, socket)
-
                         continue;
                     }
 
@@ -199,18 +209,9 @@ const server = net.createServer((socket) => {
                         }
                     }
                 } else if (envelope.type == MessageType.WHISPER) {
-                    const userId = socketToUserId.get(socket);
+                    const userId = requireAuth(socket);
 
                     if (!userId) {
-                        const errorEnvelope: MessageEnvelope = createEnvelope(
-                            MessageType.ERROR,
-                            {
-                                code: ErrorCode.UNAUTHORIZED,
-                                message: "You must JOIN before sending messages."
-                            }
-                        );
-
-                        sendEnvelope(errorEnvelope, socket)
                         continue;
                     }
 
@@ -243,19 +244,9 @@ const server = net.createServer((socket) => {
 
                     whisperEnvelope(messageEnvelope, recipient.id);
                 } else if (envelope.type == MessageType.ROOM_JOIN) {
-                    const userId = socketToUserId.get(socket);
+                    const userId = requireAuth(socket);
 
                     if (!userId) {
-                        const errorEnvelope: MessageEnvelope = createEnvelope(
-                            MessageType.ERROR,
-                            {
-                                code: ErrorCode.UNAUTHORIZED,
-                                message: "You must JOIN before sending messages."
-                            }
-                        );
-
-                        sendEnvelope(errorEnvelope, socket)
-
                         continue;
                     }
 
@@ -288,19 +279,9 @@ const server = net.createServer((socket) => {
                     }
 
                 } else if (envelope.type == MessageType.ROOM_LEAVE) {
-                    const userId = socketToUserId.get(socket);
+                    const userId = requireAuth(socket);
 
                     if (!userId) {
-                        const errorEnvelope: MessageEnvelope = createEnvelope(
-                            MessageType.ERROR,
-                            {
-                                code: ErrorCode.UNAUTHORIZED,
-                                message: "You must JOIN before sending messages."
-                            }
-                        );
-
-                        sendEnvelope(errorEnvelope, socket)
-
                         continue;
                     }
 
