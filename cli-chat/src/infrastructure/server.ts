@@ -28,10 +28,10 @@ const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
 const leaveRoomUseCase = new LeaveRoomUseCase(roomRepository);
 
 
-function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
+function broadcastEnvelope(envelope: MessageEnvelope, excludeId?: string) {
     for (const [userId, clientSocket] of connectionMap.entries()) {
 
-        if (userId !== senderUser.id) {
+        if (userId !== excludeId) {
             sendEnvelope(envelope, clientSocket);
         }
     }
@@ -135,7 +135,7 @@ const server = net.createServer((socket) => {
                             MessageType.SYSTEM,
                             { message: `${username} has entered the Citadel.` }
                         );
-                        broadcastEnvelope(userJoinedEnvelope, user);
+                        broadcastEnvelope(userJoinedEnvelope, user.id);
 
                     } catch (domainError: any) {
                         const errorCode = domainError.message === "Username is already taken"
@@ -373,7 +373,7 @@ const server = net.createServer((socket) => {
                 }
             );
 
-            broadcastEnvelope(disconnectEnvelope, user);
+            broadcastEnvelope(disconnectEnvelope, user.id);
         }
     });
 
