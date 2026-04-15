@@ -27,15 +27,12 @@ const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
 const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
 const leaveRoomUseCase = new LeaveRoomUseCase(roomRepository);
 
-function serializeEnvelope(envelope: MessageEnvelope) {
-    return JSON.stringify(envelope) + '\n';
-}
 
 function broadcastEnvelope(envelope: MessageEnvelope, senderUser: User) {
     for (const [userId, clientSocket] of connectionMap.entries()) {
 
         if (userId !== senderUser.id) {
-            clientSocket.write(serializeEnvelope(envelope));
+            sendEnvelope(envelope, clientSocket);
         }
     }
 }
@@ -48,7 +45,7 @@ function whisperEnvelope(envelope: MessageEnvelope, userId: string) {
 }
 
 function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
-    return socket.write(serializeEnvelope(envelope));
+    return socket.write(JSON.stringify(envelope) + '\n');
 }
 
 function requireAuth(socket: net.Socket): string | null {
