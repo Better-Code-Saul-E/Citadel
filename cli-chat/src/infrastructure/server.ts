@@ -25,7 +25,7 @@ const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
 const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
 const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
-const leaveRoomUseCase = new LeaveRoomUseCase(roomRepository);
+const leaveRoomUseCase = new LeaveRoomUseCase(userRepository, roomRepository);
 
 
 function broadcastEnvelope(envelope: MessageEnvelope, excludeId?: string) {
@@ -298,10 +298,6 @@ const server = net.createServer((socket) => {
 
                     try {
                         leaveRoomUseCase.execute(userId, envelope.payload.room);
-
-                        if (user) {
-                            user.currentRoomName = null;
-                        }
 
                         serverLogger.info(`${user?.username.value} has returned to the Citadel.`);
 
