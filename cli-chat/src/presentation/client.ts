@@ -95,6 +95,13 @@ client.on('data', (chunk) => {
 
                         sendEnvelope(joinErrorEnvelope);
                     });
+                } else if (envelope.type == MessageType.ERROR) {
+                    if (envelope.payload.code === 'ROOM_FULL' || envelope.payload.code === 'ALREADY_IN_ROOM') {
+                        clientLogger.warn(envelope.payload.message);
+                    }
+                    else {
+                        clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
+                    }
                 }
             }
 

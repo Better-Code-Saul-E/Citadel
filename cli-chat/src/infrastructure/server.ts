@@ -264,10 +264,20 @@ const server = net.createServer((socket) => {
                         sendEnvelope(successEnvelope, socket);
                     }
                     catch (err: any) {
+                        let errorCode = ErrorCode.BAD_REQUEST;
+                        
+                        if(err.message.includes("is full")){
+                            errorCode = ErrorCode.ROOM_FULL;
+                        } else if (err.message.includes("already in the room")){
+                            errorCode = ErrorCode.ALREADY_IN_ROOM;
+                        } else if (err.message === "User not found.") {
+                            errorCode = ErrorCode.USER_NOT_FOUND;
+                        }
+
                         const errorEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.ERROR,
                             {
-                                code: ErrorCode.UNAUTHORIZED,
+                                code: errorCode,
                                 message: err.message
                             }
                         );
