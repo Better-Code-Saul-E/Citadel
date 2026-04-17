@@ -42,7 +42,7 @@ export class JoinRoomUseCase {
         }
 
         room.join(user);
-        user.currentRoomName = room.name;
+        user.enterRoom(room.name);
 
         return room;
     }

@@ -22,7 +22,7 @@ export class LeaveRoomUseCase {
         }
 
         room.leave(userId);
-        user.currentRoomName = null;
+        user.returnToLobby();
 
         if (room.isEmpty) {
             this._roomRepository.remove(room.id);
