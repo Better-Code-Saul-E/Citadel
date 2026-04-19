@@ -71,9 +71,9 @@ client.on('data', (chunk) => {
             }
             else if (envelope.type === MessageType.MESSAGE) {
                 if (envelope.payload.room) {
-                    clientLogger.message(`[${envelope.payload.room}] ${envelope.payload.username}`, envelope.payload.text);
+                    clientLogger.message(`[${envelope.payload.room}] ${envelope.payload.username ?? 'Unknown'}`, envelope.payload.text ?? '');
                 } else {
-                    clientLogger.message(envelope.payload.username, envelope.payload.text);
+                    clientLogger.message(envelope.payload.username ?? 'Unknown', envelope.payload.text ?? '');
                 }
             }
             else if (envelope.type === MessageType.WHISPER) {

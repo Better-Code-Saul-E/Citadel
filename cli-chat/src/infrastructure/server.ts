@@ -212,6 +212,19 @@ const server = net.createServer((socket) => {
                         continue;
                     }
 
+                    if (!envelope.payload.recipient) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.BAD_REQUEST,
+                                message: "WHISPER requires a recipient"
+                            }
+                        );
+
+                        sendEnvelope(errorEnvelope, socket);
+                        continue;
+                    }
+
                     const recipient = userRepository.getByUsername(envelope.payload.recipient);
 
                     if (!recipient) {
@@ -219,7 +232,7 @@ const server = net.createServer((socket) => {
                             MessageType.ERROR,
                             {
                                 code: ErrorCode.USER_NOT_FOUND,
-                                message: "Recipient does not exists"
+                                message: "Recipient does not exist"
                             }
                         );
 
