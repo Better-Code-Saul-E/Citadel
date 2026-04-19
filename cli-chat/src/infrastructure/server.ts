@@ -36,13 +36,6 @@ function broadcastEnvelope(envelope: MessageEnvelope, excludeId?: string) {
         }
     }
 }
-function whisperEnvelope(envelope: MessageEnvelope, userId: string) {
-    const socket = connectionMap.get(userId);
-
-    if (socket) {
-        sendEnvelope(envelope, socket);
-    }
-}
 
 function sendEnvelope(envelope: MessageEnvelope, socket: net.Socket) {
     return socket.write(JSON.stringify(envelope) + '\n');
@@ -252,7 +245,12 @@ const server = net.createServer((socket) => {
                         }
                     );
 
-                    whisperEnvelope(messageEnvelope, recipient.id);
+                    const recipientSocket = connectionMap.get(recipient.id)
+                    
+                    if(recipientSocket){
+                        sendEnvelope(messageEnvelope, recipientSocket);
+                    }
+
                 } else if (envelope.type == MessageType.ROOM_JOIN) {
                     const userId = requireAuth(socket);
 
