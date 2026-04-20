@@ -12,6 +12,7 @@ import { UserDisconnectUseCase } from '../application/useCases/UserDisconnectUse
 import { InMemoryRoomRepository } from './repositories/InMemoryRoomRepository';
 import { JoinRoomUseCase } from '../application/useCases/JoinRoomUseCase';
 import { LeaveRoomUseCase } from '../application/useCases/LeaveRoomUseCase';
+import { SystemEvent } from '../domain/enums/SystemEvent';
 
 
 const PORT = 4000;
@@ -69,7 +70,10 @@ const server = net.createServer((socket) => {
 
     const welcomeEnvelope: MessageEnvelope = createEnvelope(
         MessageType.SYSTEM,
-        { message: "Welcome to the Citadel. Please send a JOIN command." }
+        {
+            message: "Welcome to the Citadel. Please send a JOIN command.",
+            event: SystemEvent.AUTH_REQUIRED
+        }
     );
 
     sendEnvelope(welcomeEnvelope, socket)
@@ -119,7 +123,10 @@ const server = net.createServer((socket) => {
 
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
-                            { message: `Welcome, ${username}!` }
+                            {
+                                message: `Welcome, ${username}!`,
+                                event: SystemEvent.JOIN_SUCCESS
+                            }
                         );
 
                         sendEnvelope(successEnvelope, socket)
@@ -246,8 +253,8 @@ const server = net.createServer((socket) => {
                     );
 
                     const recipientSocket = connectionMap.get(recipient.id)
-                    
-                    if(recipientSocket){
+
+                    if (recipientSocket) {
                         sendEnvelope(messageEnvelope, recipientSocket);
                     }
 
@@ -268,7 +275,8 @@ const server = net.createServer((socket) => {
                             MessageType.SYSTEM,
                             {
                                 message: `You have entered the room: ${room.name}`,
-                                room: room.name
+                                room: room.name,
+                                event: SystemEvent.ROOM_JOINED
                             }
                         );
 
@@ -276,10 +284,10 @@ const server = net.createServer((socket) => {
                     }
                     catch (err: any) {
                         let errorCode = ErrorCode.BAD_REQUEST;
-                        
-                        if(err.message.includes("is full")){
+
+                        if (err.message.includes("is full")) {
                             errorCode = ErrorCode.ROOM_FULL;
-                        } else if (err.message.includes("already in the room")){
+                        } else if (err.message.includes("already in the room")) {
                             errorCode = ErrorCode.ALREADY_IN_ROOM;
                         } else if (err.message === "User not found.") {
                             errorCode = ErrorCode.USER_NOT_FOUND;
@@ -315,7 +323,8 @@ const server = net.createServer((socket) => {
                         const successEnvelope: MessageEnvelope = createEnvelope(
                             MessageType.SYSTEM,
                             {
-                                message: `You have left the room and returned to the Citadel.`
+                                message: `You have left the room and returned to the Citadel.`,
+                                event: SystemEvent.ROOM_LEFT
                             }
                         );
 

@@ -1,0 +1,6 @@
+export enum SystemEvent {
+    AUTH_REQUIRED = 'AUTH_REQUIRED',
+    JOIN_SUCCESS = 'JOIN_SUCCESS',
+    ROOM_JOINED = 'ROOM_JOINED',
+    ROOM_LEFT = 'ROOM_LEFT'
+}

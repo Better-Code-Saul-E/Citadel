@@ -4,6 +4,7 @@ import { MessageType } from '../domain/enums/MessageType';
 import { MessageEnvelope } from '../domain/types/MessageEnvelope';
 import { createEnvelope } from '../shared/utils/createEnvelope';
 import { clientLogger } from './output/ClientLogger';
+import { SystemEvent } from '../domain/enums/SystemEvent';
 
 const PORT = 4000;
 const HOST = '127.0.0.1';
@@ -44,28 +45,39 @@ client.on('data', (chunk) => {
             if (envelope.type === MessageType.SYSTEM) {
                 clientLogger.system(envelope.payload.message);
 
+                switch (envelope.payload.event) {
+                    case SystemEvent.AUTH_REQUIRED:
+                        if (!isJoined) {
+                            rl.question('Enter your username: ', (name) => {
+                                currentUsername = name.trim();
 
-                if (!isJoined && envelope.payload.message.includes("JOIN COMMAND")) {
-                    rl.question('Enter your username: ', (name) => {
-                        currentUsername = name.trim();
+                                const joinEnvelope: MessageEnvelope = createEnvelope(
+                                    MessageType.JOIN,
+                                    {
+                                        username: currentUsername
+                                    }
+                                );
 
-                        const joinEnvelope: MessageEnvelope = createEnvelope(
-                            MessageType.JOIN,
-                            {
-                                username: currentUsername
-                            }
-                        );
+                                sendEnvelope(joinEnvelope);
+                            });
+                        }
+                        break;
 
-                        sendEnvelope(joinEnvelope);
-                    });
-                }
-                else if (!isJoined && envelope.payload.message.includes("Welcome,")) {
-                    isJoined = true;
-                    rl.prompt();
-                } else if (isJoined && envelope.payload.message.includes("entered the room")){
-                    currentRoom = envelope.payload.room;
-                } else if (isJoined && envelope.payload.message.includes("returned")){
-                    currentRoom = undefined;
+                    case SystemEvent.JOIN_SUCCESS:
+                        isJoined = true;
+                        rl.prompt();
+                        break;
+
+                    case SystemEvent.ROOM_JOINED:
+                        currentRoom = envelope.payload.room;
+                        break;
+
+                    case SystemEvent.ROOM_LEFT:
+                        currentRoom = undefined;
+                        break;
+
+                    default:
+                        break;
                 }
 
             }
