@@ -3,6 +3,8 @@ import { UserRepository } from "../../domain/UserRepository";
 import { RoomRepository } from "../../domain/RoomRepository";
 import { v4 as uuidv4 } from "uuid";
 
+const DEFAULT_ROOM_LIMIT = 10;
+
 export class JoinRoomUseCase {
     private _userRepository: UserRepository
     private _roomRepository: RoomRepository
@@ -36,7 +38,7 @@ export class JoinRoomUseCase {
         let room = this._roomRepository.getByName(roomName);
 
         if(!room){
-            const roomLimit = limit !== undefined ? limit : 10;
+            const roomLimit = limit !== undefined ? limit : DEFAULT_ROOM_LIMIT;
             room = new Room(uuidv4(), roomName, roomLimit);
             this._roomRepository.add(room);
         }
