@@ -4,7 +4,6 @@ import { MessageEnvelope } from '../domain/types/MessageEnvelope';
 import { ErrorCode } from '../domain/errors/ErrorCode';
 import { UserJoinUseCase } from '../application/useCases/UserJoinUseCase';
 import { InMemoryUserRepository } from './repositories/InMemoryUserRepository';
-import { User } from '../domain/entities/User';
 import { createEnvelope } from '../shared/utils/createEnvelope';
 import { serverLogger } from './logger/ServerLogger';
 import { SendMessageUseCase } from '../application/useCases/SendMessageUseCase';
@@ -24,7 +23,7 @@ const roomRepository = new InMemoryRoomRepository();
 
 const userJoinUseCase = new UserJoinUseCase(userRepository);
 const sendMessageUseCase = new SendMessageUseCase(userRepository);
-const userDisconnectUseCase = new UserDisconnectUseCase(userRepository);
+const userDisconnectUseCase = new UserDisconnectUseCase(userRepository, roomRepository);
 const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
 const leaveRoomUseCase = new LeaveRoomUseCase(userRepository, roomRepository);
 

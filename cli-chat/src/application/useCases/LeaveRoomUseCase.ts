@@ -10,22 +10,24 @@ export class LeaveRoomUseCase {
         this._roomRepository = roomRepository;
     }
 
-    public execute(userId: string, roomName: string): void {
+    public execute(userId: string, roomName: string): boolean {
         const room = this._roomRepository.getByName(roomName);
         if (!room) {
-            throw new Error(`Room ${roomName} does not exist.`);
+            return false;
         }
 
         const user = this._userRepository.getById(userId);
         if(!user){
-            throw new Error("User not found.");
+            return false;
         }
 
-        room.leave(userId);
+        const wasRemoved = room.leave(userId);
         user.returnToLobby();
 
         if (room.isEmpty) {
             this._roomRepository.remove(room.id);
         }
+
+        return wasRemoved;
     }
 }

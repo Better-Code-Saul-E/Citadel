@@ -30,12 +30,8 @@ export class Room {
         this._members.set(user.id, user);
     }
 
-    public leave(userId: string): void {
-        const wasRemoved = this._members.delete(userId);
-
-        if(!wasRemoved){
-            throw new Error(`User is not in the room ${this.name}`);
-        }
+    public leave(userId: string): boolean {
+        return this._members.delete(userId);
     }
 
     public hasUser(userId: string): boolean {
