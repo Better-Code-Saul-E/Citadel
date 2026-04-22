@@ -3,8 +3,9 @@ import { LogLevel } from "../../shared/types/LogLevel";
 import { LogTag } from "../../shared/types/LogTag";
 import { formatLog } from "../../shared/utils/formatLog";
 import { getTimeStamp } from "../../shared/utils/getTimeStamp";
+import { ChatLogger } from "./ChatLogger";
 
-class ClientLogger implements Logger {
+class ClientLogger implements ChatLogger {
     public info(message: string): void {
         console.log(formatLog(getTimeStamp(), LogLevel.INFO, LogTag.CLIENT, message));
     }
