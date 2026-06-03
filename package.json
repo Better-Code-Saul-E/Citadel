@@ -13,8 +13,12 @@
     "dev:client": "ts-node src/presentation/client.ts"
   },
   "devDependencies": {
-    "@types/node": "^...",
-    "ts-node": "^...",
-    "typescript": "^..."
+    "@types/node": "^24.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.0"
+  },
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "uuid": "^14.0.0"
   }
 }
