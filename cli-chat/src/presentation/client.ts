@@ -92,8 +92,6 @@ client.on('data', (chunk) => {
                 clientLogger.whisper(envelope.payload.username, envelope.payload.text);
             }
             else if (envelope.type === MessageType.ERROR) {
-                clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
-
                 if (!isJoined && (envelope.payload.code === 'INVALID_USERNAME' || envelope.payload.code === 'DUPLICATE_USERNAME')) {
                     rl.question('Try a different username: ', (name) => {
                         currentUsername = name.trim();
@@ -107,14 +105,13 @@ client.on('data', (chunk) => {
 
                         sendEnvelope(joinErrorEnvelope);
                     });
-                } else if (envelope.type == MessageType.ERROR) {
-                    if (envelope.payload.code === 'ROOM_FULL' || envelope.payload.code === 'ALREADY_IN_ROOM') {
-                        clientLogger.warn(envelope.payload.message);
-                    }
-                    else {
-                        clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
-                    }
+                } else if (envelope.payload.code === 'ROOM_FULL' || envelope.payload.code === 'ALREADY_IN_ROOM') {
+                    clientLogger.warn(envelope.payload.message);
                 }
+                else {
+                    clientLogger.error(`${envelope.payload.code}: ${envelope.payload.message}`);
+                }
+
             }
 
             if (isJoined) {
@@ -187,7 +184,7 @@ rl.on('line', (input) => {
 
         sendEnvelope(roomEnvelope);
     }
-    else if (isJoined && text.startsWith('/leave ')){
+    else if (isJoined && text.startsWith('/leave ')) {
         const roomDetails = text.substring(7).trim().split(" ");
 
         let roomName = roomDetails[0];
@@ -201,6 +198,32 @@ rl.on('line', (input) => {
         );
 
         sendEnvelope(roomEnvelope);
+    }
+    else if (isJoined && text.startsWith('/su ')) {
+        const superUser = text.substring(3).trim().split(" ");
+
+        const superUserEnvelope: MessageEnvelope = createEnvelope(
+            MessageType.ADMIN,
+            {
+                username: currentUsername,
+                password: superUser[0]
+            }
+        )
+
+        sendEnvelope(superUserEnvelope);
+    }
+    else if (isJoined && text.startsWith('/mute ')){
+        const userToMute = text.substring(6).trim().split(" ");
+
+        const muteUserEnvelope: MessageEnvelope = createEnvelope(
+            MessageType.MUTE,
+            {
+                username: currentUsername,
+                userToMute: userToMute[0]
+            }
+        )
+
+        sendEnvelope(muteUserEnvelope);
     }
     else if (isJoined) {
         const messageEnvelope: MessageEnvelope = createEnvelope(

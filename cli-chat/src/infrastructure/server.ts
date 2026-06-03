@@ -12,6 +12,8 @@ import { InMemoryRoomRepository } from './repositories/InMemoryRoomRepository';
 import { JoinRoomUseCase } from '../application/useCases/JoinRoomUseCase';
 import { LeaveRoomUseCase } from '../application/useCases/LeaveRoomUseCase';
 import { SystemEvent } from '../domain/enums/SystemEvent';
+import { SuperUserUseCase } from '../application/useCases/SuperUserUseCase';
+import { MuteUserUseCase } from '../application/useCases/MuteUserUseCase';
 
 
 const PORT = 4000;
@@ -26,7 +28,8 @@ const sendMessageUseCase = new SendMessageUseCase(userRepository);
 const userDisconnectUseCase = new UserDisconnectUseCase(userRepository, roomRepository);
 const joinRoomUseCase = new JoinRoomUseCase(userRepository, roomRepository);
 const leaveRoomUseCase = new LeaveRoomUseCase(userRepository, roomRepository);
-
+const superUserUseCase = new SuperUserUseCase("ADMIN_PRIVY", userRepository);
+const muteUserUseCase = new MuteUserUseCase(userRepository);
 
 function broadcastEnvelope(envelope: MessageEnvelope, excludeId?: string) {
     for (const [userId, clientSocket] of connectionMap.entries()) {
@@ -357,7 +360,69 @@ const server = net.createServer((socket) => {
                         sendEnvelope(errorEnvelope, socket);
                     }
 
-                }
+                } else if (envelope.type == MessageType.ADMIN) {
+                    const userId = requireAuth(socket);
+
+                    if (!userId) {
+                        continue;
+                    }
+
+                    try {
+                        superUserUseCase.execute(userId, envelope.payload.password);
+
+                        const successEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            {
+                                message: `Acess Granted. You are now an Administator.`,
+                                event: SystemEvent.ADMIN_JOIN
+                            }
+                        );
+
+                        sendEnvelope(successEnvelope, socket);
+
+                    } catch (err: any) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: err.message
+                            }
+                        );
+                        
+                        sendEnvelope(errorEnvelope, socket);
+                    }
+                } else if (envelope.type == MessageType.MUTE) {
+                    const userId = requireAuth(socket);
+
+                    if (!userId) {
+                        continue;
+                    }
+
+                    try {
+                        muteUserUseCase.execute(userId, envelope.payload.userToMute);
+
+                        const successEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.SYSTEM,
+                            {
+                                message: `You have muted ${envelope.payload.userToMute}`,
+                                event: SystemEvent.USER_MUTED
+                            }
+                        );
+
+                        sendEnvelope(successEnvelope, socket);
+
+                    } catch (err: any) {
+                        const errorEnvelope: MessageEnvelope = createEnvelope(
+                            MessageType.ERROR,
+                            {
+                                code: ErrorCode.UNAUTHORIZED,
+                                message: err.message
+                            }
+                        );
+                        
+                        sendEnvelope(errorEnvelope, socket);
+                    }
+                } 
             } catch (err: any) {
                 serverLogger.warn(`Protocol violation: ${err.message}`);
 

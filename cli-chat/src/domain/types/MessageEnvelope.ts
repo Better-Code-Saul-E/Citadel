@@ -9,6 +9,8 @@ export interface RoomJoinPayload { username: string; room: string; limit: number
 export interface RoomLeavePayload { username: string; room: string; }
 export interface SystemPayload { message: string; room?: string; event?: SystemEvent }
 export interface ErrorPayload { code: ErrorCode | string; message: string; }
+export interface AdminPayload { username: string; password: string; }
+export interface MutePayload { username: string; userToMute: string; }
 
 export type MessageEnvelope =
     | { type: MessageType.JOIN; payload: JoinPayload; timestamp?: string }
@@ -17,6 +19,7 @@ export type MessageEnvelope =
     | { type: MessageType.ROOM_JOIN; payload: RoomJoinPayload; timestamp?: string }
     | { type: MessageType.ROOM_LEAVE; payload: RoomLeavePayload; timestamp?: string }
     | { type: MessageType.SYSTEM; payload: SystemPayload; timestamp?: string }
-    | { type: MessageType.ERROR; payload: ErrorPayload; timestamp?: string };
+    | { type: MessageType.ERROR; payload: ErrorPayload; timestamp?: string }
+    | { type: MessageType.ADMIN; payload: AdminPayload; timestamp?: string }
+    | { type: MessageType.MUTE; payload: MutePayload; timestamp?: string };
 
-    

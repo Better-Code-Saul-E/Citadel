@@ -6,5 +6,7 @@ export enum MessageType {
     ROOM_LEAVE = "LEAVE",
     SYSTEM = "SYSTEM",
     ERROR = "ERROR",
-    COMMAND = "COMMAND"
+    COMMAND = "COMMAND",
+    ADMIN = "ADMIN",
+    MUTE = "MUTE"
 }
